@@ -52,6 +52,11 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // IPC to get adb version
+  ipcMain.handle('get-adb-version', async () => {
+    const version = '1.0.0 (test)'
+    return `ADB Version: ${version}`
+  })
   createWindow()
 
   app.on('activate', function () {
