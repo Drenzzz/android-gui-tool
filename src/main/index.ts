@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { exec } from 'child_process'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
@@ -49,14 +50,36 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.handle('get-devices', () => {
+    return new Promise((resolve) => {
+      exec('adb devices -l', (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`)
+          resolve([])
+          return
+        }
+        if (stderr) {
+          console.error(`stderr: ${stderr}`)
+        }
 
-  // IPC to get adb version
-  ipcMain.handle('get-adb-version', async () => {
-    const version = '1.0.0 (test)'
-    return `ADB Version: ${version}`
+        const lines = stdout.split('\n').slice(1)
+        const devices = lines
+          .map((line) => {
+            if (line.trim() === '') return null
+            const parts = line.split(/\s+/)
+            const id = parts[0]
+            const type = parts[1]
+            const modelMatch = line.match(/model:(\S+)/)
+            const model = modelMatch ? modelMatch[1] : 'Unknown Device'
+            return { id, type, model }
+          })
+          .filter((device): device is { id: string; type: string; model: string } => device !== null)
+
+        resolve(devices)
+      })
+    })
   })
+
   createWindow()
 
   app.on('activate', function () {

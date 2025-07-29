@@ -1,6 +1,13 @@
 // Declare our API on the global window object
+export interface Device {
+  id: string
+  type: string
+  model?: string
+}
+
 export interface ICustomAPI {
   getAdbVersion: () => Promise<string>
+  getDevices: () => Promise<Device[]>
 }
 
 declare global {
