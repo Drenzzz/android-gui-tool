@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { getAdbDevices, getAdbDeviceDetails } from './lib/commands'
+import { getAdbDevices, getAdbDeviceDetails, rebootAdbDevice } from './lib/commands'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
@@ -52,6 +52,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-devices', getAdbDevices)
   ipcMain.handle('get-device-details', (_, deviceId) => getAdbDeviceDetails(deviceId))
+  ipcMain.handle('reboot-device', (_, deviceId, mode) => rebootAdbDevice(deviceId, mode))
 
   createWindow()
 

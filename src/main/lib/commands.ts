@@ -68,3 +68,17 @@ export async function getAdbDeviceDetails(deviceId: string): Promise<DeviceDetai
     return null
   }
 }
+
+export async function rebootAdbDevice(
+  deviceId: string,
+  mode: 'system' | 'bootloader' | 'recovery' | 'fastboot'
+): Promise<void> {
+  try {
+    const command =
+      mode === 'system' ? `adb -s ${deviceId} reboot` : `adb -s ${deviceId} reboot ${mode}`
+    await runCommand(command)
+  } catch (error) {
+    console.error(`Failed to reboot device ${deviceId} to ${mode}`, error)
+    throw error
+  }
+}

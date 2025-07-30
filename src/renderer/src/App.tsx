@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { DeviceDetailsPanel } from './components/DeviceDetailsPanel'
 import type { Device, DeviceDetails } from './types'
+import { RebootControls } from './components/RebootControls'
 
 const RefreshIcon = () => (
   <svg
@@ -143,6 +144,10 @@ function App(): React.JSX.Element {
           <div className="flex flex-col gap-4">
             <h3 className="text-xl font-semibold">Device Details</h3>
             <DeviceDetailsPanel details={selectedDeviceDetails} isLoading={isLoadingDetails} />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Reboot Options</h3>
+            <RebootControls deviceId={selectedDeviceId} />
           </div>
         </main>
       </div>

@@ -13,9 +13,12 @@ export interface DeviceDetails {
   batteryLevel?: number
 }
 
+export type RebootMode = 'system' | 'bootloader' | 'recovery' | 'fastboot'
+
 export interface ICustomAPI {
   getAdbVersion: () => Promise<string>
   getDevices: () => Promise<Device[]>
+  rebootDevice: (deviceId: string, mode: RebootMode) => Promise<void>
 }
 
 declare global {
