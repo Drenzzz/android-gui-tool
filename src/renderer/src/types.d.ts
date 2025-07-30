@@ -10,6 +10,7 @@ export interface DeviceDetails {
   manufacturer: string
   androidVersion: string
   sdkVersion: string
+  batteryLevel?: number
 }
 
 export interface ICustomAPI {

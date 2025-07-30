@@ -39,27 +39,41 @@ const DeviceListIcon = () => (
   </svg>
 )
 
-function App(): JSX.Element {
+function App(): React.JSX.Element {
   const [devices, setDevices] = useState<Device[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingDevices, setIsLoadingDevices] = useState(true)
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
   const [selectedDeviceDetails, setSelectedDeviceDetails] = useState<DeviceDetails | null>(null)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+
+  const handleSelectDevice = (deviceId: string) => {
+    if (deviceId === selectedDeviceId) return // Jangan lakukan apa-apa jika perangkat yang sama diklik
+
+    setSelectedDeviceId(deviceId)
+    setSelectedDeviceDetails(null)
+    setIsLoadingDetails(true)
+
+    window.api.getDeviceDetails(deviceId).then((details) => {
+      setSelectedDeviceDetails(details)
+      setIsLoadingDetails(false)
+    })
+  }
 
   const fetchDevices = () => {
-    setIsLoading(true)
-    setSelectedDeviceDetails(null) // Reset detail saat refresh
+    setIsLoadingDevices(true)
+    setSelectedDeviceId(null)
+    setSelectedDeviceDetails(null)
 
     window.api
       .getDevices()
       .then((fetchedDevices) => {
         setDevices(fetchedDevices)
         if (fetchedDevices.length > 0 && fetchedDevices[0]) {
-          window.api.getDeviceDetails(fetchedDevices[0].id).then((details) => {
-            setSelectedDeviceDetails(details)
-          })
+          handleSelectDevice(fetchedDevices[0].id)
         }
       })
       .finally(() => {
-        setIsLoading(false)
+        setIsLoadingDevices(false)
       })
   }
 
@@ -72,7 +86,7 @@ function App(): JSX.Element {
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <header className="p-4 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">Connected Devices</h2>
+          <h2 className="text-2xl font-semibold">Device Dashboard</h2>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">
               ADB Status:{' '}
@@ -80,41 +94,40 @@ function App(): JSX.Element {
                 {devices.length > 0 ? 'Connected' : 'Disconnected'}
               </span>
             </span>
-            <button
-              onClick={fetchDevices}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-500"
-              disabled={isLoading}
-            >
+            <button onClick={fetchDevices} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-500" disabled={isLoadingDevices}>
               <RefreshIcon />
-              {isLoading ? 'Refreshing...' : 'Refresh Devices'}
+              {isLoadingDevices ? 'Refreshing...' : 'Refresh Devices'}
             </button>
           </div>
         </header>
 
-        {/* Layout utama */}
-        <main className="flex-1 p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* */}
+        <main className="flex-1 p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-8">
           <div className="flex flex-col gap-4">
             <h3 className="text-xl font-semibold">Device List</h3>
-            <div className="space-y-4">
-              {isLoading ? (
+            <div className="space-y-2">
+              {isLoadingDevices ? (
                 <p>Loading devices...</p>
               ) : devices.length > 0 ? (
                 devices.map((device) => (
                   <div
                     key={device.id}
-                    className="bg-gray-800 p-4 rounded-lg flex justify-between items-center border border-transparent hover:border-blue-500 cursor-pointer transition-all"
+                    onClick={() => handleSelectDevice(device.id)}
+                    className={`p-4 rounded-lg flex justify-between items-center border transition-all cursor-pointer ${
+                      selectedDeviceId === device.id
+                        ? 'bg-blue-600 border-blue-400'
+                        : 'bg-gray-800 border-transparent hover:border-gray-600'
+                    }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="text-green-400">
-                        <DeviceListIcon />
-                      </div>
+                      <div className="text-green-400"><DeviceListIcon /></div>
                       <div>
                         <p className="font-semibold">{device.model}</p>
                         <p className="text-sm text-gray-400">{device.id}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-semibold uppercase bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                    <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-full ${
+                      selectedDeviceId === device.id ? 'bg-blue-400/30 text-blue-200' : 'bg-green-500/20 text-green-400'
+                    }`}>
                       {device.type}
                     </span>
                   </div>
@@ -122,18 +135,14 @@ function App(): JSX.Element {
               ) : (
                 <div className="text-center py-10 bg-gray-800 rounded-lg">
                   <p className="text-gray-400">No devices found.</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Please connect a device and enable USB Debugging.
-                  </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* */}
           <div className="flex flex-col gap-4">
             <h3 className="text-xl font-semibold">Device Details</h3>
-            <DeviceDetailsPanel details={selectedDeviceDetails} />
+            <DeviceDetailsPanel details={selectedDeviceDetails} isLoading={isLoadingDetails} />
           </div>
         </main>
       </div>

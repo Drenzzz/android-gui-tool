@@ -81,17 +81,9 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('get-device-details', async (_, deviceId: string) => {
-    const command = `adb -s ${deviceId} shell getprop`
-
-    return new Promise((resolve) => {
-      exec(command, (error, stdout) => {
-        if (error) {
-          console.error(`getprop error: ${error}`)
-          resolve(null)
-          return
-        }
-
-        // Ubah output menjadi objek yang mudah dibaca
+    const getProps = new Promise<Map<string, string>>((resolve) => {
+      exec(`adb -s ${deviceId} shell getprop`, (err, stdout) => {
+        if (err) return resolve(new Map())
         const props = new Map<string, string>()
         stdout.split('\n').forEach((line) => {
           const match = line.match(/\[(.*?)\]: \[(.*?)\]/)
@@ -99,17 +91,29 @@ app.whenReady().then(() => {
             props.set(match[1].trim(), match[2].trim())
           }
         })
-
-        const details = {
-          model: props.get('ro.product.model') || 'Unknown',
-          manufacturer: props.get('ro.product.manufacturer') || 'Unknown',
-          androidVersion: props.get('ro.build.version.release') || 'Unknown',
-          sdkVersion: props.get('ro.build.version.sdk') || 'Unknown'
-        }
-
-        resolve(details)
+        resolve(props)
       })
     })
+
+    const getBattery = new Promise<number | undefined>((resolve) => {
+      exec(`adb -s ${deviceId} shell dumpsys battery`, (err, stdout) => {
+        if (err) return resolve(undefined)
+        const levelMatch = stdout.match(/level: (\d+)/)
+        resolve(levelMatch ? parseInt(levelMatch[1]) : undefined)
+      })
+    })
+
+    const [props, batteryLevel] = await Promise.all([getProps, getBattery])
+
+    if (props.size === 0) return null
+
+    return {
+      model: props.get('ro.product.model') || 'Unknown',
+      manufacturer: props.get('ro.product.manufacturer') || 'Unknown',
+      androidVersion: props.get('ro.build.version.release') || 'Unknown',
+      sdkVersion: props.get('ro.build.version.sdk') || 'Unknown',
+      batteryLevel: batteryLevel
+    }
   })
 
   createWindow()
