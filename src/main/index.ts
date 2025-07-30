@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { exec } from 'child_process'
+import { getAdbDevices, getAdbDeviceDetails } from './lib/commands'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
@@ -50,71 +50,8 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  ipcMain.handle('get-devices', () => {
-    return new Promise((resolve) => {
-      exec('adb devices -l', (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`)
-          resolve([])
-          return
-        }
-        if (stderr) {
-          console.error(`stderr: ${stderr}`)
-        }
-
-        const lines = stdout.split('\n').slice(1)
-        const devices = lines
-          .map((line) => {
-            if (line.trim() === '') return null
-            const parts = line.split(/\s+/)
-            const id = parts[0]
-            const type = parts[1]
-            const modelMatch = line.match(/model:(\S+)/)
-            const model = modelMatch ? modelMatch[1] : 'Unknown Device'
-            return { id, type, model }
-          })
-          .filter((device): device is { id: string; type: string; model: string } => device !== null)
-
-        resolve(devices)
-      })
-    })
-  })
-
-  ipcMain.handle('get-device-details', async (_, deviceId: string) => {
-    const getProps = new Promise<Map<string, string>>((resolve) => {
-      exec(`adb -s ${deviceId} shell getprop`, (err, stdout) => {
-        if (err) return resolve(new Map())
-        const props = new Map<string, string>()
-        stdout.split('\n').forEach((line) => {
-          const match = line.match(/\[(.*?)\]: \[(.*?)\]/)
-          if (match && match[1] && match[2]) {
-            props.set(match[1].trim(), match[2].trim())
-          }
-        })
-        resolve(props)
-      })
-    })
-
-    const getBattery = new Promise<number | undefined>((resolve) => {
-      exec(`adb -s ${deviceId} shell dumpsys battery`, (err, stdout) => {
-        if (err) return resolve(undefined)
-        const levelMatch = stdout.match(/level: (\d+)/)
-        resolve(levelMatch ? parseInt(levelMatch[1]) : undefined)
-      })
-    })
-
-    const [props, batteryLevel] = await Promise.all([getProps, getBattery])
-
-    if (props.size === 0) return null
-
-    return {
-      model: props.get('ro.product.model') || 'Unknown',
-      manufacturer: props.get('ro.product.manufacturer') || 'Unknown',
-      androidVersion: props.get('ro.build.version.release') || 'Unknown',
-      sdkVersion: props.get('ro.build.version.sdk') || 'Unknown',
-      batteryLevel: batteryLevel
-    }
-  })
+  ipcMain.handle('get-devices', getAdbDevices)
+  ipcMain.handle('get-device-details', (_, deviceId) => getAdbDeviceDetails(deviceId))
 
   createWindow()
 
