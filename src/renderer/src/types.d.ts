@@ -5,6 +5,13 @@ export interface Device {
   model?: string
 }
 
+export interface DeviceDetails {
+  model: string
+  manufacturer: string
+  androidVersion: string
+  sdkVersion: string
+}
+
 export interface ICustomAPI {
   getAdbVersion: () => Promise<string>
   getDevices: () => Promise<Device[]>

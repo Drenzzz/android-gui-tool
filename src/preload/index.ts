@@ -4,7 +4,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 // Custom APIs for renderer
 const api = {
   getAdbVersion: (): Promise<string> => ipcRenderer.invoke('get-adb-version'),
-  getDevices: (): Promise<any[]> => ipcRenderer.invoke('get-devices')
+  getDevices: (): Promise<any[]> => ipcRenderer.invoke('get-devices'),
+  getDeviceDetails: (deviceId: string): Promise<any> => ipcRenderer.invoke('get-device-details', deviceId)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

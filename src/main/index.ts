@@ -80,6 +80,38 @@ app.whenReady().then(() => {
     })
   })
 
+  ipcMain.handle('get-device-details', async (_, deviceId: string) => {
+    const command = `adb -s ${deviceId} shell getprop`
+
+    return new Promise((resolve) => {
+      exec(command, (error, stdout) => {
+        if (error) {
+          console.error(`getprop error: ${error}`)
+          resolve(null)
+          return
+        }
+
+        // Ubah output menjadi objek yang mudah dibaca
+        const props = new Map<string, string>()
+        stdout.split('\n').forEach((line) => {
+          const match = line.match(/\[(.*?)\]: \[(.*?)\]/)
+          if (match && match[1] && match[2]) {
+            props.set(match[1].trim(), match[2].trim())
+          }
+        })
+
+        const details = {
+          model: props.get('ro.product.model') || 'Unknown',
+          manufacturer: props.get('ro.product.manufacturer') || 'Unknown',
+          androidVersion: props.get('ro.build.version.release') || 'Unknown',
+          sdkVersion: props.get('ro.build.version.sdk') || 'Unknown'
+        }
+
+        resolve(details)
+      })
+    })
+  })
+
   createWindow()
 
   app.on('activate', function () {
