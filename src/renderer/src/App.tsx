@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar'
 import { DeviceDetailsPanel } from './components/DeviceDetailsPanel'
 import type { Device, DeviceDetails } from './types'
 import { RebootControls } from './components/RebootControls'
+import { FastbootRebootControls } from './components/FastbootRebootControls'
 
 const RefreshIcon = () => (
   <svg
@@ -41,23 +42,25 @@ const DeviceListIcon = () => (
 )
 
 function App(): React.JSX.Element {
-  const [devices, setDevices] = useState<Device[]>([])
+  const [allDevices, setAllDevices] = useState<Device[]>([])
   const [isLoadingDevices, setIsLoadingDevices] = useState(true)
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
   const [selectedDeviceDetails, setSelectedDeviceDetails] = useState<DeviceDetails | null>(null)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
 
   const handleSelectDevice = (deviceId: string) => {
-    if (deviceId === selectedDeviceId) return // Jangan lakukan apa-apa jika perangkat yang sama diklik
-
+    if (deviceId === selectedDeviceId) return
     setSelectedDeviceId(deviceId)
     setSelectedDeviceDetails(null)
-    setIsLoadingDetails(true)
 
-    window.api.getDeviceDetails(deviceId).then((details) => {
-      setSelectedDeviceDetails(details)
-      setIsLoadingDetails(false)
-    })
+    const device = allDevices.find((d) => d.id === deviceId)
+    if (device && device.type === 'device') {
+      setIsLoadingDetails(true)
+      window.api.getDeviceDetails(deviceId).then((details) => {
+        setSelectedDeviceDetails(details)
+        setIsLoadingDetails(false)
+      })
+    }
   }
 
   const fetchDevices = () => {
@@ -65,12 +68,12 @@ function App(): React.JSX.Element {
     setSelectedDeviceId(null)
     setSelectedDeviceDetails(null)
 
-    window.api
-      .getDevices()
-      .then((fetchedDevices) => {
-        setDevices(fetchedDevices)
-        if (fetchedDevices.length > 0 && fetchedDevices[0]) {
-          handleSelectDevice(fetchedDevices[0].id)
+    Promise.all([window.api.getDevices(), window.api.getFastbootDevices()])
+      .then(([adbDevices, fastbootDevices]) => {
+        const combinedDevices = [...adbDevices, ...fastbootDevices]
+        setAllDevices(combinedDevices)
+        if (combinedDevices.length > 0 && combinedDevices[0]) {
+          handleSelectDevice(combinedDevices[0].id)
         }
       })
       .finally(() => {
@@ -82,6 +85,8 @@ function App(): React.JSX.Element {
     fetchDevices()
   }, [])
 
+  const selectedDevice = allDevices.find((d) => d.id === selectedDeviceId)
+
   return (
     <div className="w-screen h-screen bg-gray-900 text-white flex">
       <Sidebar />
@@ -91,8 +96,8 @@ function App(): React.JSX.Element {
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">
               ADB Status:{' '}
-              <span className={devices.length > 0 ? 'text-green-400' : 'text-red-400'}>
-                {devices.length > 0 ? 'Connected' : 'Disconnected'}
+              <span className={allDevices.length > 0 ? 'text-green-400' : 'text-red-400'}>
+                {allDevices.length > 0 ? 'Connected' : 'Disconnected'}
               </span>
             </span>
             <button onClick={fetchDevices} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-500" disabled={isLoadingDevices}>
@@ -108,8 +113,8 @@ function App(): React.JSX.Element {
             <div className="space-y-2">
               {isLoadingDevices ? (
                 <p>Loading devices...</p>
-              ) : devices.length > 0 ? (
-                devices.map((device) => (
+              ) : allDevices.length > 0 ? (
+                allDevices.map((device) => (
                   <div
                     key={device.id}
                     onClick={() => handleSelectDevice(device.id)}
@@ -120,14 +125,14 @@ function App(): React.JSX.Element {
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="text-green-400"><DeviceListIcon /></div>
+                      <div className={device.type === 'fastboot' ? 'text-yellow-400' : 'text-green-400'}><DeviceListIcon /></div>
                       <div>
                         <p className="font-semibold">{device.model}</p>
                         <p className="text-sm text-gray-400">{device.id}</p>
                       </div>
                     </div>
                     <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-full ${
-                      selectedDeviceId === device.id ? 'bg-blue-400/30 text-blue-200' : 'bg-green-500/20 text-green-400'
+                      device.type === 'fastboot' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
                     }`}>
                       {device.type}
                     </span>
@@ -141,13 +146,21 @@ function App(): React.JSX.Element {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <h3 className="text-xl font-semibold">Device Details</h3>
-            <DeviceDetailsPanel details={selectedDeviceDetails} isLoading={isLoadingDetails} />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Reboot Options</h3>
-            <RebootControls deviceId={selectedDeviceId} />
+          <div className="flex flex-col gap-6">
+            <div>
+              <h3 className="text-xl font-semibold">Device Details</h3>
+              <DeviceDetailsPanel details={selectedDeviceDetails} isLoading={isLoadingDetails} />
+            </div>
+
+            {selectedDevice?.type === 'device' && (
+              <div>
+                <h3 className="text-xl font-semibold mb-4">ADB Reboot Options</h3>
+                <RebootControls deviceId={selectedDeviceId} />
+              </div>
+            )}
+            {selectedDevice?.type === 'fastboot' && (
+              <FastbootRebootControls deviceId={selectedDeviceId} />
+            )}
           </div>
         </main>
       </div>

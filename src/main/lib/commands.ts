@@ -82,3 +82,41 @@ export async function rebootAdbDevice(
     throw error
   }
 }
+
+export async function getFastbootDevices(): Promise<Device[]> {
+  try {
+    const stdout = await runCommand('fastboot devices')
+    return stdout
+      .split('\n')
+      .map((line) => {
+        if (line.trim() === '') return null
+        const [id] = line.split(/\s+/)
+        return { id, type: 'fastboot', model: 'Fastboot Mode' }
+      })
+      .filter((device): device is Device => device !== null)
+  } catch (error) {
+    return []
+  }
+}
+
+export async function rebootFastbootDevice(
+  deviceId: string,
+  mode: FastbootRebootMode
+): Promise<void> {
+  let command: string
+  switch (mode) {
+    case 'system':
+      command = `fastboot -s ${deviceId} reboot`
+      break
+    case 'bootloader':
+      command = `fastboot -s ${deviceId} reboot bootloader`
+      break
+    case 'recovery':
+      command = `fastboot -s ${deviceId} reboot recovery`
+      break
+    case 'fastboot':
+      command = `fastboot -s ${deviceId} reboot fastboot`
+      break
+  }
+  await runCommand(command)
+}

@@ -1,12 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { AdbRebootMode, FastbootRebootMode } from '../renderer/src/types'
 
 // Custom APIs for renderer
 const api = {
   getAdbVersion: (): Promise<string> => ipcRenderer.invoke('get-adb-version'),
   getDevices: (): Promise<any[]> => ipcRenderer.invoke('get-devices'),
-  getDeviceDetails: (deviceId: string): Promise<any> => ipcRenderer.invoke('get-device-details', deviceId),
-  rebootDevice: (deviceId: string, mode: any): Promise<void> => ipcRenderer.invoke('reboot-device', deviceId, mode)
+  getDeviceDetails: (deviceId: string): Promise<any> =>
+    ipcRenderer.invoke('get-device-details', deviceId),
+  rebootDevice: (deviceId: string, mode: AdbRebootMode): Promise<void> =>
+    ipcRenderer.invoke('reboot-device', deviceId, mode),
+  getFastbootDevices: (): Promise<any[]> => ipcRenderer.invoke('get-fastboot-devices'),
+  rebootFastbootDevice: (deviceId: string, mode: FastbootRebootMode): Promise<void> =>
+    ipcRenderer.invoke('reboot-fastboot-device', deviceId, mode)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
