@@ -3,7 +3,6 @@ import { Sidebar } from './components/Sidebar'
 import { DeviceDetailsPanel } from './components/DeviceDetailsPanel'
 import type { Device, DeviceDetails } from './types'
 import { RebootControls } from './components/RebootControls'
-import { FastbootRebootControls } from './components/FastbootRebootControls'
 
 const RefreshIcon = () => (
   <svg
@@ -95,12 +94,18 @@ function App(): React.JSX.Element {
           <h2 className="text-2xl font-semibold">Device Dashboard</h2>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">
-              ADB Status:{' '}
+              Status:{' '}
               <span className={allDevices.length > 0 ? 'text-green-400' : 'text-red-400'}>
-                {allDevices.length > 0 ? 'Connected' : 'Disconnected'}
+                {allDevices.length > 0
+                  ? `${allDevices.length} Device(s) Connected`
+                  : 'Disconnected'}
               </span>
             </span>
-            <button onClick={fetchDevices} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-500" disabled={isLoadingDevices}>
+            <button
+              onClick={fetchDevices}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-500"
+              disabled={isLoadingDevices}
+            >
               <RefreshIcon />
               {isLoadingDevices ? 'Refreshing...' : 'Refresh Devices'}
             </button>
@@ -108,6 +113,7 @@ function App(): React.JSX.Element {
         </header>
 
         <main className="flex-1 p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-8">
+          {/* Panel Kiri: Daftar Perangkat */}
           <div className="flex flex-col gap-4">
             <h3 className="text-xl font-semibold">Device List</h3>
             <div className="space-y-2">
@@ -125,15 +131,25 @@ function App(): React.JSX.Element {
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={device.type === 'fastboot' ? 'text-yellow-400' : 'text-green-400'}><DeviceListIcon /></div>
+                      <div
+                        className={
+                          device.type === 'fastboot' ? 'text-yellow-400' : 'text-green-400'
+                        }
+                      >
+                        <DeviceListIcon />
+                      </div>
                       <div>
                         <p className="font-semibold">{device.model}</p>
                         <p className="text-sm text-gray-400">{device.id}</p>
                       </div>
                     </div>
-                    <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-full ${
-                      device.type === 'fastboot' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
-                    }`}>
+                    <span
+                      className={`text-xs font-semibold uppercase px-2 py-1 rounded-full ${
+                        device.type === 'fastboot'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : 'bg-green-500/20 text-green-400'
+                      }`}
+                    >
                       {device.type}
                     </span>
                   </div>
@@ -146,21 +162,17 @@ function App(): React.JSX.Element {
             </div>
           </div>
 
+          {/* Panel Kanan: Detail & Kontrol */}
           <div className="flex flex-col gap-6">
             <div>
               <h3 className="text-xl font-semibold">Device Details</h3>
               <DeviceDetailsPanel details={selectedDeviceDetails} isLoading={isLoadingDetails} />
             </div>
 
-            {selectedDevice?.type === 'device' && (
-              <div>
-                <h3 className="text-xl font-semibold mb-4">ADB Reboot Options</h3>
-                <RebootControls deviceId={selectedDeviceId} />
-              </div>
-            )}
-            {selectedDevice?.type === 'fastboot' && (
-              <FastbootRebootControls deviceId={selectedDeviceId} />
-            )}
+            {/* PERBAIKAN UTAMA: Bungkus semua kontrol reboot dalam satu div */}
+            <div>
+              <RebootControls deviceId={selectedDeviceId} deviceType={selectedDevice?.type} />
+            </div>
           </div>
         </main>
       </div>
